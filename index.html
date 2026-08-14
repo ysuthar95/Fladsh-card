@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ Active Flashcard Board</title>
+    <style>
+        :root {
+            --bg-dark: #0f0f12;
+            --panel-bg: #16161d;
+            --item-bg: #1e1e26;
+            --accent-glow: #6366f1;
+            --accent-hover: #4f46e5;
+            --success-green: #10b981;
+            --danger-red: #ef4444;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --border-ui: #272732;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+            background-color: transparent;
+            color: var(--text-main);
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .dashboard-container {
+            width: 100%;
+            max-width: 520px;
+            background: var(--panel-bg);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4), 0 0 0 1px var(--border-ui);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-ui);
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .action-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+
+        .column-select {
+            background-color: var(--item-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border-ui);
+            border-radius: 10px;
+            padding: 0 10px;
+            height: 36px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+            flex: 1;
+        }
+
+        .column-select:focus {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+
+        .font-size-control {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background-color: var(--item-bg);
+            border: 1px solid var(--border-ui);
+            border-radius: 10px;
+            padding: 0 8px;
+            height: 36px;
+        }
+
+        .font-size-control label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .font-size-input {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 12px;
+            font-weight: 700;
+            width: 36px;
+            text-align: center;
+            outline: none;
+        }
+
+        .font-size-input::-webkit-outer-spin-button,
+        .font-size-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .font-size-input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        .btn-sync {
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent-glow);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 10px;
+            width: 36px;
+            height: 36px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 15px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-sync:hover {
+            background: var(--accent-glow);
+            color: #ffffff;
+            transform: scale(1.05);
+        }
+
+        .btn-sync.spinning {
+            animation: spin 0.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+        }
+
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+
+        .stream-section {
+            margin-bottom: 20px;
+        }
+
+        .stream-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 220px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stream-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: var(--item-bg);
+            border: 1px solid transparent;
+            border-radius: 10px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+        }
+
+        .stream-item:hover {
+            border-color: var(--border-ui);
+            background: #23232d;
+        }
+
+        .stream-item.active-playing {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .stream-item-text {
+            font-size: 13.5px;
+            color: #e5e7eb;
+            line-height: 1.4;
+            flex: 1;
+            word-break: break-word;
+        }
+
+        .stream-badge {
+            font-size: 10px;
+            background: var(--border-ui);
+            color: var(--text-muted);
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .stream-item.active-playing .stream-badge {
+            background: var(--accent-glow);
+            color: #ffffff;
+        }
+
+        .deck-viewer {
+            background: #000000;
+            color: white;
+            min-height: 170px;
+            border-radius: 16px 16px 0 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 28px 20px 24px 20px;
+            text-align: center;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255,255,255,0.1);
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+        }
+
+        .deck-viewer:active {
+            transform: scale(0.99);
+        }
+
+        .deck-text {
+            font-size: 18px;
+            font-weight: 600;
+            line-height: 1.45;
+            word-break: break-word;
+            margin-bottom: 12px;
+            letter-spacing: 0.2px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            transition: font-size 0.1s ease;
+        }
+
+        .deck-counter {
+            font-size: 11px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 4px 10px;
+            border-radius: 20px;
+            letter-spacing: 0.5px;
+            position: absolute;
+            bottom: 12px;
+        }
+
+        .deck-hint {
+            font-size: 10px;
+            font-weight: 600;
+            opacity: 0.6;
+            position: absolute;
+            top: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        .audio-bar {
+            background: #1a1a24;
+            border: 1px solid var(--border-ui);
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .audio-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .btn-audio {
+            background: var(--accent-glow);
+            color: #ffffff;
+            border: none;
+            border-radius: 10px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-audio:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-audio.btn-stop {
+            background: rgba(239, 68, 68, 0.15);
+            color: var(--danger-red);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-audio.btn-stop:hover {
+            background: var(--danger-red);
+            color: #ffffff;
+        }
+
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--item-bg);
+            border: 1px solid var(--border-ui);
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .speed-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .speed-select {
+            background: transparent;
+            color: var(--text-main);
+            border: none;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            outline: none;
+        }
+
+        .speed-select option {
+            background-color: var(--panel-bg);
+            color: var(--text-main);
+        }
+
+        .stream-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .stream-list::-webkit-scrollbar-thumb {
+            background: var(--border-ui);
+            border-radius: 10px;
+        }
+        .stream-list::-webkit-scrollbar-thumb:hover {
+            background: #3f3f52;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="action-controls">
+                <select class="column-select" id="columnSelect" onchange="renderSelectedColumnData()" title="Select Column">
+                    <option value="all">⚡ All Columns</option>
+                </select>
+
+                <div class="font-size-control" title="Adjust Font Size (px)">
+                    <label for="fontSizeInput">S</label>
+                    <input type="number" id="fontSizeInput" class="font-size-input" value="18" min="10" max="48" oninput="changeFontSize(this.value)">
+                </div>
+
+                <button class="btn-sync" id="refreshBtn" onclick="fetchSpreadsheetData()" title="Force Cloud Refresh">🔄</button>
+            </div>
+        </div>
+
+        <div class="stream-section">
+            <ul class="stream-list" id="cardList"></ul>
+        </div>
+
+        <div class="deck-viewer" id="viewer" onclick="nextCard()">
+            <div class="deck-hint" id="viewerHint">Tap box to shift</div>
+            <div class="deck-text" id="viewerText">Syncing cloud database...</div>
+            <div class="deck-counter" id="viewerCounter">0 / 0</div>
+        </div>
+
+        <div class="audio-bar">
+            <div class="audio-btn-group">
+                <button class="btn-audio" id="btnStartPronounce" onclick="startPronounceLoop()">
+                    🔊 Start Pronouncing
+                </button>
+                <button class="btn-audio btn-stop" id="btnStopPronounce" onclick="stopPronounceLoop()" style="display: none;">
+                    ⏹️ Stop
+                </button>
+            </div>
+
+            <div class="speed-control">
+                <span class="speed-label">Speed:</span>
+                <select class="speed-select" id="speechSpeed" onchange="onSpeedChange()">
+                    <option value="0.75">0.75x</option>
+                    <option value="1.0" selected>1x</option>
+                    <option value="1.25">1.25x</option>
+                    <option value="1.5">1.5x</option>
+                    <option value="2.0">2x</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQkmhpHPItyUajZ3XqOjWRTBpH2b58Fp46XWmHMLII4ObXtf5LD5gVyaYqgXKpHGfzKLKsWbJFsZ-nf/pub?output=csv";
+
+        let rawParsedMatrix = []; 
+        let flashcards = [];
+        let currentPoolIndex = 0;
+
+        let isSpeakingLoop = false;
+        let speechTimeout = null;
+
+        const viewerText = document.getElementById('viewerText');
+        const viewerCounter = document.getElementById('viewerCounter');
+        const cardList = document.getElementById('cardList');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const columnSelect = document.getElementById('columnSelect');
+        const fontSizeInput = document.getElementById('fontSizeInput');
+        const btnStartPronounce = document.getElementById('btnStartPronounce');
+        const btnStopPronounce = document.getElementById('btnStopPronounce');
+        const speechSpeed = document.getElementById('speechSpeed');
+
+        const savedFontSize = localStorage.getItem('deckFontSize') || '18';
+        fontSizeInput.value = savedFontSize;
+        viewerText.style.fontSize = `${savedFontSize}px`;
+
+        const activeCol = localStorage.getItem('selectedColumn') || 'all';
+        flashcards = JSON.parse(localStorage.getItem(`flashcards_${activeCol}`)) || [];
+        
+        loadStateForColumn(activeCol);
+
+        if (flashcards.length > 0) {
+            updateViewer();
+            renderList();
+        }
+        
+        fetchSpreadsheetData();
+
+        function changeFontSize(val) {
+            if (!val || val < 8) return;
+            viewerText.style.fontSize = `${val}px`;
+            localStorage.setItem('deckFontSize', val);
+        }
+
+        function parseCSVLine(text) {
+            let fields = [];
+            let currentField = '';
+            let inQuotes = false;
+            
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"') {
+                    inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    fields.push(currentField.trim());
+                    currentField = '';
+                } else {
+                    currentField += char;
+                }
+            }
+            fields.push(currentField.trim());
+            return fields;
+        }
+
+        async function fetchSpreadsheetData() {
+            refreshBtn.classList.add('spinning');
+
+            try {
+                const response = await fetch(SHEET_CSV_URL);
+                if (!response.ok) throw new Error("Sync failed.");
+                
+                const csvData = await response.text();
+                const lines = csvData.split(/\r?\n/).filter(line => line.trim().length > 0);
+                
+                if (lines.length > 0) {
+                    rawParsedMatrix = lines.map(line => 
+                        parseCSVLine(line).map(cell => cell.replace(/^"|"$/g, '').trim())
+                    );
+
+                    const firstRow = rawParsedMatrix[0] || [];
+                    const maxCols = Math.max(...rawParsedMatrix.map(row => row.length));
+                    
+                    const headersList = [];
+                    for (let c = 0; c < maxCols; c++) {
+                        const hName = (firstRow[c] && firstRow[c].length > 0) ? firstRow[c] : `Column ${c + 1}`;
+                        headersList.push(hName);
+                    }
+
+                    populateDropdown(headersList);
+                    renderSelectedColumnData();
+                }
+            } catch (error) {
+                console.error("Fetch problem: ", error);
+                if (flashcards.length === 0) {
+                    viewerText.innerHTML = "Connection offline. Click 🔄 to retry.";
+                }
+            } finally {
+                setTimeout(() => refreshBtn.classList.remove('spinning'), 600);
+            }
+        }
+
+        function populateDropdown(headers) {
+            const currentSelection = localStorage.getItem('selectedColumn') || 'all';
+            columnSelect.innerHTML = '<option value="all">⚡ All Columns</option>';
+
+            headers.forEach((hName, idx) => {
+                const opt = document.createElement('option');
+                opt.value = idx.toString();
+                opt.textContent = hName;
+                columnSelect.appendChild(opt);
+            });
+
+            if ([...columnSelect.options].some(o => o.value === currentSelection)) {
+                columnSelect.value = currentSelection;
+            } else {
+                columnSelect.value = 'all';
+            }
+        }
+
+        function loadStateForColumn(colVal) {
+            currentPoolIndex = parseInt(localStorage.getItem(`currentPoolIndex_${colVal}`)) || 0;
+            if (currentPoolIndex >= flashcards.length) {
+                currentPoolIndex = 0;
+            }
+        }
+
+        function saveStateForColumn(colVal) {
+            localStorage.setItem(`flashcards_${colVal}`, JSON.stringify(flashcards));
+            localStorage.setItem(`currentPoolIndex_${colVal}`, currentPoolIndex.toString());
+        }
+
+        function renderSelectedColumnData() {
+            const selectedVal = columnSelect.value;
+            localStorage.setItem('selectedColumn', selectedVal);
+
+            let parsedRows = [];
+
+            if (rawParsedMatrix.length > 0) {
+                if (selectedVal === 'all') {
+                    // Row-by-Row Sequential Order (Row 2 Col A, Row 2 Col B... Row 3 Col A...)
+                    for (let r = 1; r < rawParsedMatrix.length; r++) {
+                        rawParsedMatrix[r].forEach(cell => {
+                            if (cell && cell.length > 0) parsedRows.push(cell);
+                        });
+                    }
+                } else {
+                    const colIdx = parseInt(selectedVal);
+                    for (let r = 1; r < rawParsedMatrix.length; r++) {
+                        if (rawParsedMatrix[r][colIdx] !== undefined) {
+                            const val = rawParsedMatrix[r][colIdx];
+                            if (val && val.length > 0) parsedRows.push(val);
+                        }
+                    }
+                }
+            }
+
+            if (parsedRows.length > 0) {
+                flashcards = parsedRows;
+            }
+
+            loadStateForColumn(selectedVal);
+
+            updateViewer();
+            renderList();
+        }
+
+        function nextCard() {
+            if (flashcards.length <= 1) return;
+            const colVal = columnSelect.value;
+            
+            currentPoolIndex++;
+            
+            if (currentPoolIndex >= flashcards.length) {
+                currentPoolIndex = 0;
+            }
+            
+            saveStateForColumn(colVal);
+            updateViewer();
+            highlightActiveListItem();
+
+            if (isSpeakingLoop) {
+                speakCurrentCard();
+            }
+        }
+
+        function updateViewer() {
+            if (flashcards.length === 0) {
+                viewerText.innerHTML = "Selected column is empty.";
+                viewerCounter.textContent = "0 / 0";
+                return;
+            }
+            if (currentPoolIndex >= flashcards.length) {
+                currentPoolIndex = 0;
+                saveStateForColumn(columnSelect.value);
+            }
+
+            const cleanText = flashcards[currentPoolIndex]
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .split(/\s*,\s*/)
+                .join('<br>');
+
+            viewerText.innerHTML = cleanText;
+            viewerCounter.textContent = `${currentPoolIndex + 1} / ${flashcards.length}`;
+        }
+
+        function renderList() {
+            cardList.innerHTML = '';
+            
+            flashcards.forEach((card, index) => {
+                const li = document.createElement('li');
+                li.className = 'stream-item';
+                li.id = `item-idx-${index}`;
+                
+                const textSpan = document.createElement('span');
+                textSpan.className = 'stream-item-text';
+                textSpan.textContent = card;
+
+                const badge = document.createElement('span');
+                badge.className = 'stream-badge';
+                badge.textContent = `#${index + 1}`;
+
+                li.appendChild(textSpan);
+                li.appendChild(badge);
+                
+                li.onclick = () => {
+                    currentPoolIndex = index;
+                    saveStateForColumn(columnSelect.value);
+                    updateViewer();
+                    highlightActiveListItem();
+
+                    if (isSpeakingLoop) {
+                        speakCurrentCard();
+                    }
+                };
+                cardList.appendChild(li);
+            });
+            highlightActiveListItem();
+        }
+
+        function highlightActiveListItem() {
+            if (flashcards.length === 0) return;
+            document.querySelectorAll('.stream-item').forEach(el => el.classList.remove('active-playing'));
+            
+            const activeEl = document.getElementById(`item-idx-${currentPoolIndex}`);
+            if (activeEl) {
+                activeEl.classList.add('active-playing');
+                activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+        }
+
+        /* --- SPEECH SYNTHESIS ENGINE --- */
+
+        function startPronounceLoop() {
+            if (!('speechSynthesis' in window)) {
+                alert("Your browser does not support Speech Synthesis.");
+                return;
+            }
+
+            isSpeakingLoop = true;
+            btnStartPronounce.style.display = 'none';
+            btnStopPronounce.style.display = 'inline-flex';
+
+            speakCurrentCard();
+        }
+
+        function stopPronounceLoop() {
+            isSpeakingLoop = false;
+            if (speechTimeout) clearTimeout(speechTimeout);
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+            }
+            btnStartPronounce.style.display = 'inline-flex';
+            btnStopPronounce.style.display = 'none';
+        }
+
+        function speakCurrentCard() {
+            if (!isSpeakingLoop) return;
+
+            if (speechTimeout) clearTimeout(speechTimeout);
+            window.speechSynthesis.cancel();
+
+            if (!flashcards[currentPoolIndex]) return;
+
+            const textToSpeak = flashcards[currentPoolIndex];
+            const utterance = new SpeechSynthesisUtterance(textToSpeak);
+            
+            utterance.rate = parseFloat(speechSpeed.value || 1.0);
+
+            utterance.onend = () => {
+                if (isSpeakingLoop) {
+                    speechTimeout = setTimeout(() => {
+                        speakCurrentCard();
+                    }, 900);
+                }
+            };
+
+            utterance.onerror = (e) => {
+                if (isSpeakingLoop && e.error !== 'interrupted' && e.error !== 'canceled') {
+                    speechTimeout = setTimeout(() => {
+                        speakCurrentCard();
+                    }, 1000);
+                }
+            };
+
+            window.speechSynthesis.speak(utterance);
+        }
+
+        function onSpeedChange() {
+            if (isSpeakingLoop) {
+                speakCurrentCard();
+            }
+        }
+    </script>
+</body>
+</html>
